@@ -6,6 +6,8 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { saveOrder } from "@/lib/order";
+import { useAdmin } from "@/lib/admin-context";
+import { AdminLoginModal } from "@/components/admin-login-modal";
 
 
 // ─── Constants ────────────────────────────────────────────────
@@ -95,6 +97,7 @@ const TESTIMONIALS = [
 // ─── Main Component ───────────────────────────────────────────
 
 export default function App() {
+  const { isAdmin, showLoginModal, setShowLoginModal } = useAdmin();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -444,9 +447,15 @@ export default function App() {
               <Link href="/track" onClick={() => setShowMenu(false)} style={{ display: "block", padding: "10px 12px", borderRadius: 6, color: GOLD, fontSize: 13, textDecoration: "none", fontFamily: "'Cairo', sans-serif" }}>
                 📦 تتبع طلبي
               </Link>
-              <Link href="/admin" onClick={() => setShowMenu(false)} style={{ display: "block", padding: "10px 12px", borderRadius: 6, color: GOLD, fontSize: 13, textDecoration: "none", fontFamily: "'Cairo', sans-serif" }}>
-                🔒 إدارة
-              </Link>
+              {isAdmin ? (
+                <Link href="/admin" onClick={() => setShowMenu(false)} style={{ display: "block", padding: "10px 12px", borderRadius: 6, color: GOLD, fontSize: 13, textDecoration: "none", fontFamily: "'Cairo', sans-serif" }}>
+                  🔒 إدارة
+                </Link>
+              ) : (
+                <button onClick={() => { setShowMenu(false); setShowLoginModal(true); }} style={{ display: "block", padding: "10px 12px", borderRadius: 6, color: GOLD, fontSize: 13, textDecoration: "none", fontFamily: "'Cairo', sans-serif", background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "right" }}>
+                  🔒 إدارة
+                </button>
+              )}
             </div>
           )}
 
@@ -860,6 +869,7 @@ export default function App() {
       )}
 
       <ImageLightbox product={selectedProduct} onClose={() => setSelectedProduct(null)} darkMode={darkMode} />
+      <AdminLoginModal />
 
     </div>
 
