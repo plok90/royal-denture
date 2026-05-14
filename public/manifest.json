@@ -1,0 +1,16 @@
+{
+  "name": "ROYAL DENTURE - مختبر الأسنان الملكي",
+  "short_name": "RD",
+  "description": "مختبر الأسنان الملكي - اختر ما يناسبك والباقي علينا",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a0a05",
+  "theme_color": "#1a0a05",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
