@@ -6,7 +6,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAdmin } from "@/lib/admin-context";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { getLocalOrders, removeLocalOrder, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
+import { getLocalOrders, getSettingsOrders, removeLocalOrder, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
 
 // ─── Types ──────────────────────────────────────────────────────
 interface Product {
@@ -128,8 +128,10 @@ export default function Admin() {
     ]);
     if (!p.error) setProducts((p.data as Product[]) || []);
     if (!o.error) setOrders((o.data as any[]) || []);
-    else if (o.error.code === "PGRST205") { setOrders(getLocalOrders()); }
-    else { setOrders(getLocalOrders()); }
+    else {
+      const fromSettings = await getSettingsOrders();
+      setOrders(fromSettings.length ? fromSettings : getLocalOrders());
+    }
     setLoading(false);
   }
 

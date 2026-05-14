@@ -55,6 +55,7 @@ export function buildCompletionMessage(
 }
 
 const LOCAL_ORDERS_KEY = "rd_orders_fallback"
+const SETTINGS_KEY = "rd_orders"
 
 export async function saveOrder(
   name: string,
@@ -63,33 +64,51 @@ export async function saveOrder(
   items: { product_id: string; name: string; name_ar: string; quantity: number; price: number }[],
   total: number,
 ): Promise<void> {
+  const order = buildOrder(name, phone, notes, items, total)
   const supabase = createClient()
-  if (!supabase) {
-    saveOrderToLocal(name, phone, notes, items, total)
-    return
+  if (supabase) {
+    const { error } = await supabase.from("orders").insert(order)
+    if (!error) {
+      saveOrderToLocal(order)
+      return
+    }
+    console.warn("orders insert:", error.code, error.message)
+    const saved = await saveOrderToSettings(supabase, order)
+    if (saved) { saveOrderToLocal(order); return }
   }
-  const { error } = await supabase.from("orders").insert({
-    customer_name: name,
-    customer_phone: phone,
-    notes,
-    items,
-    total,
-    status: "قيد المعالجة",
-  })
-  if (error) {
-    console.warn("Supabase order save failed; saving locally:", error.message)
-    saveOrderToLocal(name, phone, notes, items, total)
-  }
+  saveOrderToLocal(order)
 }
 
-function saveOrderToLocal(
+async function saveOrderToSettings(supabase: ReturnType<typeof createClient>, order: Order): Promise<boolean> {
+  try {
+    const { data } = await supabase.from("admin_settings").select("value").eq("key", SETTINGS_KEY).maybeSingle()
+    const orders: Order[] = data?.value ? JSON.parse(data.value) : []
+    orders.unshift(order)
+    const { error } = await supabase.from("admin_settings").upsert(
+      { key: SETTINGS_KEY, value: JSON.stringify(orders) },
+      { onConflict: "key", ignoreDuplicates: false }
+    )
+    return !error
+  } catch { return false }
+}
+
+export async function getSettingsOrders(): Promise<Order[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+  try {
+    const { data } = await supabase.from("admin_settings").select("value").eq("key", SETTINGS_KEY).maybeSingle()
+    return data?.value ? JSON.parse(data.value) : []
+  } catch { return [] }
+}
+
+function buildOrder(
   name: string,
   phone: string,
   notes: string,
   items: { product_id: string; name: string; name_ar: string; quantity: number; price: number }[],
   total: number,
-) {
-  const order: Order = {
+): Order {
+  return {
     id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
     customer_name: name,
     customer_phone: phone,
@@ -100,6 +119,9 @@ function saveOrderToLocal(
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }
+}
+
+function saveOrderToLocal(order: Order) {
   try {
     const raw = localStorage.getItem(LOCAL_ORDERS_KEY)
     const existing: Order[] = raw ? JSON.parse(raw) : []

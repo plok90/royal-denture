@@ -95,7 +95,7 @@ dental-lab-app/
 │
 ├── lib/
 │   ├── types.ts             ← Product, Testimonial, AdminSetting, Order, OrderItem, FormErrors
-│   ├── order.ts             ← Pure functions: validateOrder(), buildWhatsAppMessage(), buildCompletionMessage(), getCustomerData(), getOrderStats(), exportOrdersToHTML()
+│   ├── order.ts             ← Pure functions: validateOrder(), buildWhatsAppMessage(), buildCompletionMessage(), getCustomerData(), getOrderStats(), exportOrdersToHTML(), saveOrderToSettings(), getSettingsOrders()
 │   ├── admin-context.tsx    ← AdminProvider (Context), useAdmin hook, validateAdmin(), isInitialized flag, logout
 │   ├── __tests__/
 │   │   └── order.test.ts    ← Unit tests: 16 tests for validation + message builders + customer data + stats + HTML export
@@ -169,7 +169,7 @@ dental-lab-app/
 | Track order page | ✅ Complete | /track — phone lookup, shows ALL orders (completed ✓ + pending), auto-refresh every 30s, fetches from Supabase + localStorage fallback |
 | Blur placeholder | ✅ Complete | blurDataURL on all product images (dark SVG placeholder) |
 | **Orders table SQL** | 🔲 User action | Create `orders` table in Supabase dashboard using: `CREATE TABLE orders (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL, notes TEXT DEFAULT '', items JSONB NOT NULL, total NUMERIC NOT NULL, status TEXT DEFAULT 'قيد المعالجة', created_at TIMESTAMPTZ DEFAULT now(), updated_at TIMESTAMPTZ DEFAULT now());` |
-| Order save fallback | ✅ Complete | `saveOrder()` in `lib/order.ts` tries Supabase insert; if table missing or error, saves to localStorage `rd_orders_fallback`. Admin page reads localStorage when Supabase returns PGRST205. |
+| Order save fallback | ✅ Complete | `saveOrder()` in `lib/order.ts` tries: 1) Supabase `orders` table 2) Supabase `admin_settings` (shared multi-device fallback via key `rd_orders`) 3) localStorage `rd_orders_fallback`. Admin page reads in same order. Cross-device order visibility guaranteed via `admin_settings` even when `orders` table is missing. Functions: `saveOrderToSettings()`, `getSettingsOrders()`. |
 | Type cleanup | ✅ Complete | `lib/order.ts` no longer depends on `Product`/`OrderItem` from `lib/types`; uses inline types compatible with both `page.tsx` and `admin/page.tsx` local interfaces. |
 | Removed testimonials & settings from admin | ✅ Complete | Removed nav buttons, tabs, CRUD functions, modals, types (`Testimonial`, `AdminSetting`), state, icon components (`MessageIcon`, `SettingsIcon`), and related data fetching from admin page. |
 | **Customers tab** | ✅ Complete | جدول العملاء (هاتف، اسم، المرحلة، عدد الطلبات، إجمالي المشتريات، آخر طلب)، زر واتساب لكل عميل، ضغط ← يعرض طلبات العميل في نافذة منبثقة |
