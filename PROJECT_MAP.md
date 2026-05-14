@@ -48,6 +48,15 @@ User interacts:
   [Submit] → validateOrder() from lib/order → errors? inline : setShowPreview(true)
   [Preview confirm] → buildWhatsAppMessage() from lib/order → window.open(wa.me/{number}?text=...)
   [Error] → ErrorBoundary (component) or error.tsx (page-level) catches → Arabic fallback UI
+
+Admin page mount:
+  [Full page load] → AdminProvider: isInitialized=false, isAdmin=false
+    → useEffect fires → localStorage check → setIsAdmin/setIsInitialized
+    → Admin page effect waits for isInitialized (no early redirect)
+    → isAdmin=true? setAuthChecked=true, fetchData() → Dashboard renders
+    → isAdmin=false? router.push("/") → redirected to home
+  [Client nav after login] → AdminProvider already has isAdmin=true, isInitialized=true
+    → page mounts: effect runs, !isAdmin is false → setAuthChecked=true → Dashboard
 ```
 
 ### Data Tables (Supabase)
@@ -87,7 +96,7 @@ dental-lab-app/
 ├── lib/
 │   ├── types.ts             ← Product, Testimonial, AdminSetting, Order, OrderItem, FormErrors
 │   ├── order.ts             ← Pure functions: validateOrder(), buildWhatsAppMessage(), buildCompletionMessage(), getCustomerData(), getOrderStats(), exportOrdersToHTML()
-│   ├── admin-context.tsx    ← AdminProvider (Context), useAdmin hook, validateAdmin(), logout
+│   ├── admin-context.tsx    ← AdminProvider (Context), useAdmin hook, validateAdmin(), isInitialized flag, logout
 │   ├── __tests__/
 │   │   └── order.test.ts    ← Unit tests: 16 tests for validation + message builders + customer data + stats + HTML export
 │   └── supabase/
@@ -129,7 +138,8 @@ dental-lab-app/
 |---|---|---|
 | `product-card.tsx` | 🗑️ Orphan | Not imported anywhere; inline card rendering in `page.tsx` is the active code. Safe to delete. |
 | `.env.local` | 🔲 User action | Copy `.env.example` → `.env.local` and fill Supabase credentials. Admin page now handles missing config gracefully: shows error notification for all CRUD operations instead of crashing or silent failure. |
-| Admin credentials | 🔒 By design | Hardcoded in `lib/admin-context.tsx:15-16` (`moamel@2005` / `plokplok09`). Admin page auth guard uses `useAdmin().isAdmin` (localStorage) — not Supabase Auth. |
+| Admin credentials | 🔒 By design | Hardcoded in `lib/admin-context.tsx:16-17` (`moamel@2005` / `plokplok09`). Admin page auth guard uses `useAdmin().isAdmin` (localStorage) — not Supabase Auth. |
+| `isInitialized` flag | ✅ Added | `AdminProvider` now exposes `isInitialized` that goes `true` only after localStorage session check completes. Admin page auth guard waits for it before redirecting, fixing a race condition on hard page loads (Vercel production). |
 | Supabase Storage bucket | 🔲 User action | Create `product-images` bucket (public) in Supabase dashboard |
 | `styles/globals.css` | ✅ Resolved | Deleted (was duplicate of `app/globals.css`) |
 | Unused deps | ✅ Resolved | Removed 33 unused packages (radix, shadcn, lucide, etc.) |

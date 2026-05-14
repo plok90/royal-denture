@@ -70,7 +70,7 @@ const blankProduct: Omit<Product, "id"> = {
 
 export default function Admin() {
   const router = useRouter();
-  const { isAdmin, logout: adminLogout } = useAdmin();
+  const { isAdmin, isInitialized, logout: adminLogout } = useAdmin();
   const [darkMode, setDarkMode] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -97,6 +97,7 @@ export default function Admin() {
 
   // Auth guard
   useEffect(() => {
+    if (!isInitialized) return; // wait for AdminProvider to check localStorage
     if (!isAdmin) { router.push("/"); return; }
     setAuthChecked(true);
     (async () => {
@@ -104,7 +105,7 @@ export default function Admin() {
     })();
     return () => { if (notifTimer.current) window.clearTimeout(notifTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin]);
+  }, [isAdmin, isInitialized]);
 
   function showNotification(type: "success" | "error", msg: string) {
     setNotif({ type, msg });

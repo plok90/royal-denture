@@ -7,6 +7,7 @@ interface AdminContextType {
   setIsAdmin: (value: boolean) => void
   showLoginModal: boolean
   setShowLoginModal: (value: boolean) => void
+  isInitialized: boolean
   logout: () => void
 }
 
@@ -18,6 +19,7 @@ const ADMIN_KEY = "rd_admin_session"
 
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         setIsAdmin(true)
       }
     } catch {}
+    setIsInitialized(true)
   }, [])
 
   const handleSetIsAdmin = (value: boolean) => {
@@ -50,6 +53,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       setIsAdmin: handleSetIsAdmin, 
       showLoginModal, 
       setShowLoginModal,
+      isInitialized,
       logout 
     }}>
       {children}
