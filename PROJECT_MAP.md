@@ -95,7 +95,7 @@ dental-lab-app/
 │
 ├── lib/
 │   ├── types.ts             ← Product, Testimonial, AdminSetting, Order, OrderItem, FormErrors
-│   ├── order.ts             ← Pure functions: validateOrder(), buildWhatsAppMessage(), buildCompletionMessage(), getCustomerData(), getOrderStats(), exportOrdersToHTML(), saveOrderToSettings(), getSettingsOrders()
+│   ├── order.ts             ← Pure functions: validateOrder(), buildWhatsAppMessage(), buildCompletionMessage(), getCustomerData(), getOrderStats(), exportOrdersToHTML(), saveOrderToSettings(), getSettingsOrders(), removeSettingsOrder(), updateSettingsOrderStatus()
 │   ├── admin-context.tsx    ← AdminProvider (Context), useAdmin hook, validateAdmin(), isInitialized flag, logout
 │   ├── __tests__/
 │   │   └── order.test.ts    ← Unit tests: 16 tests for validation + message builders + customer data + stats + HTML export

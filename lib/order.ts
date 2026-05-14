@@ -152,6 +152,36 @@ export function removeLocalOrder(id: string) {
   } catch { /* ignore */ }
 }
 
+export async function removeSettingsOrder(id: string): Promise<void> {
+  const supabase = createClient()
+  if (!supabase) return
+  try {
+    const { data } = await supabase.from("admin_settings").select("value").eq("key", SETTINGS_KEY).maybeSingle()
+    if (!data?.value) return
+    const orders: Order[] = JSON.parse(data.value).filter((o: Order) => o.id !== id)
+    await supabase.from("admin_settings").upsert(
+      { key: SETTINGS_KEY, value: JSON.stringify(orders) },
+      { onConflict: "key", ignoreDuplicates: false }
+    )
+  } catch { /* ignore */ }
+}
+
+export async function updateSettingsOrderStatus(id: string, status: string): Promise<void> {
+  const supabase = createClient()
+  if (!supabase) return
+  try {
+    const { data } = await supabase.from("admin_settings").select("value").eq("key", SETTINGS_KEY).maybeSingle()
+    if (!data?.value) return
+    const orders: Order[] = JSON.parse(data.value).map((o: Order) =>
+      o.id === id ? { ...o, status, updated_at: new Date().toISOString() } : o
+    )
+    await supabase.from("admin_settings").upsert(
+      { key: SETTINGS_KEY, value: JSON.stringify(orders) },
+      { onConflict: "key", ignoreDuplicates: false }
+    )
+  } catch { /* ignore */ }
+}
+
 export function getCustomerData(orders: any[], products?: any[]): { phone: string; name: string; orderCount: number; total: number; lastOrder: string; stages: string }[] {
   const map = new Map<string, { name: string; orderCount: number; total: number; lastOrder: string; stages: Set<number> }>()
   for (const o of orders) {

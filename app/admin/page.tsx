@@ -6,7 +6,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAdmin } from "@/lib/admin-context";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { getLocalOrders, getSettingsOrders, removeLocalOrder, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
+import { getLocalOrders, getSettingsOrders, removeLocalOrder, removeSettingsOrder, updateSettingsOrderStatus, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
 
 // ─── Types ──────────────────────────────────────────────────────
 interface Product {
@@ -225,12 +225,12 @@ export default function Admin() {
     const supabase = createClient();
     if (!supabase) { showNotification("error", "قاعدة البيانات غير مهيأة"); return; }
     const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-    if (error && error.code === "PGRST205") {
+    if (error) {
       const local = getLocalOrders().map(o => o.id === id ? { ...o, status, updated_at: new Date().toISOString() } : o);
       localStorage.setItem("rd_orders_fallback", JSON.stringify(local));
-      showNotification("success", "تم تحديث الحالة");
-    } else if (error) showNotification("error", error.message);
-    else showNotification("success", "تم تحديث الحالة");
+      await updateSettingsOrderStatus(id, status);
+    }
+    showNotification("success", "تم تحديث الحالة");
     await fetchData();
   }
 
@@ -240,11 +240,13 @@ export default function Admin() {
 
   async function handleConfirmDeleteOrder() {
     if (!confirmDelete || confirmDelete.type !== "order") return;
+    const id = confirmDelete.id;
     const supabase = createClient();
     if (supabase) {
-      await supabase.from("orders").delete().eq("id", confirmDelete.id);
+      await supabase.from("orders").delete().eq("id", id);
     }
-    removeLocalOrder(confirmDelete.id);
+    removeLocalOrder(id);
+    await removeSettingsOrder(id);
     setConfirmDelete(null);
     showNotification("success", "تم حذف الطلب");
     await fetchData();
