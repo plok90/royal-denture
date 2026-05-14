@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { getLocalOrders } from "@/lib/order"
+import { getLocalOrders, getSettingsOrders } from "@/lib/order"
 
 const GOLD = "#c9a84c"
 const DARK = "#1a0a05"
@@ -36,6 +36,8 @@ export default function TrackPage() {
       const { data } = await supabase.from("orders").select("*").eq("customer_phone", phone.trim()).order("created_at", { ascending: false })
       if (data) all.push(...data)
     }
+    const settingsOrders = await getSettingsOrders()
+    all.push(...settingsOrders.filter((o: any) => o.customer_phone === phone.trim()))
     all.push(...getLocalOrders().filter(o => o.customer_phone === phone.trim()))
     const seen = new Set<string>()
     const deduped = all.filter(o => { if (seen.has(o.id)) return false; seen.add(o.id); return true })
