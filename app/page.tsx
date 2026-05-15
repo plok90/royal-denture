@@ -133,7 +133,7 @@ export default function App() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [testimonials, setTestimonials] = useState<{text: string; author?: string}[]>([]);
-  const [whatsappNumber, setWhatsappNumber] = useState("9647766463735");
+  const [whatsappNumber, setWhatsappNumber] = useState(() => { try { return localStorage.getItem("rd_whatsapp") || "9647766463735"; } catch { return "9647766463735"; } });
   const [siteTitle, setSiteTitle] = useState("ROYAL DENTURE");
   const [siteSubtitle, setSiteSubtitle] = useState("مختبر الأسنان الملكي");
   const [siteTagline, setSiteTagline] = useState("اختر ما يناسبك والباقي علينا");
@@ -214,7 +214,7 @@ export default function App() {
       if (!settingsRes.error && settingsRes.data) {
         const map: Record<string, string> = {};
         (settingsRes.data as any[]).forEach(r => { map[r.key] = r.value; });
-        if (map.whatsapp_number) setWhatsappNumber(map.whatsapp_number);
+        if (map.whatsapp_number) { setWhatsappNumber(map.whatsapp_number); try { localStorage.setItem("rd_whatsapp", map.whatsapp_number); } catch {} }
         if (map.site_title) setSiteTitle(map.site_title);
         if (map.site_subtitle) setSiteSubtitle(map.site_subtitle);
         if (map.site_tagline) setSiteTagline(map.site_tagline);

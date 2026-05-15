@@ -284,6 +284,7 @@ export default function Admin() {
       { onConflict: "key", ignoreDuplicates: false }
     );
     if (error) { showNotification("error", error.message); return; }
+    try { localStorage.setItem("rd_whatsapp", number); } catch {}
     setWhatsappNumber(number);
     showNotification("success", "تم حفظ رقم واتساب");
   }
@@ -765,7 +766,7 @@ function SettingsTab({ whatsappNumber, onUpdate }: { whatsappNumber: string; onU
     <>
       <header style={{ marginBottom: 24 }}>
         <h1 style={{ color: TEXT, fontSize: 24, margin: 0, fontFamily: "serif" }}>الإعدادات</h1>
-        <p style={{ color: MUTED, fontSize: 13, margin: "4px 0 0", letterSpacing: 1 }}">إعدادات الموقع العامة</p>
+        <p style={{ color: MUTED, fontSize: 13, margin: "4px 0 0", letterSpacing: 1 }}>إعدادات الموقع العامة</p>
       </header>
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20, maxWidth: 400 }}>
         <label style={fieldLabel()}>رقم واتساب</label>
