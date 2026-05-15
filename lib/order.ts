@@ -304,6 +304,7 @@ export function exportOrdersToHTML(orders: any[], products?: any[]): string {
         <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">المنتجات</th>
         <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">المرحلة</th>
         <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">الإجمالي</th>
+        <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">العامل</th>
         <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">الحالة</th>
         <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">التاريخ</th>
       </tr></thead>
