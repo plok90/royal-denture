@@ -330,7 +330,7 @@ export default function Admin() {
         </button>
 
         <NavBtn icon={<DashboardIcon />} label="لوحة التحكم" active={activeTab === "dashboard"} onClick={() => { setActiveTab("dashboard"); setSidebarOpen(false); }} />
-        <NavBtn icon={<PackageIcon />} label="المنتجات" active={activeTab === "products"} onClick={() => { setActiveTab("products"); setSidebarOpen(false); }} />
+        <NavBtn icon={<PackageIcon />} label="المنتجات" active={activeTab === "products"} onClick={() => { setActiveTab("products"); }} />
         {activeTab === "products" && (
           <div style={{ paddingRight: 28, display: "flex", flexDirection: "column", gap: 4, marginBottom: 4 }}>
             <SubBtn label="المرحلة الثانية" count={stage2Count} active={activeStage === 2} onClick={() => { setActiveStage(2); setSidebarOpen(false); }} />
@@ -348,7 +348,7 @@ export default function Admin() {
       </aside>
 
       {/* Hamburger button */}
-      <button onClick={() => setSidebarOpen(p => !p)} style={{ position: "fixed", top: 16, right: 16, zIndex: 30, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: GOLD, fontSize: 18 }}>☰</button>
+      <button onClick={() => setSidebarOpen(p => !p)} style={{ position: "fixed", top: 16, left: 16, zIndex: 30, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: GOLD, fontSize: 18 }}>☰</button>
 
       {/* Main */}
       <main style={{ flex: 1, padding: "28px 36px 28px 16px", overflowX: "hidden" }}>
