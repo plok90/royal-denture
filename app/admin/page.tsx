@@ -92,6 +92,7 @@ export default function Admin() {
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; type: "product" | "order" } | null>(null);
   const [showSessionsModal, setShowSessionsModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [notif, setNotif] = useState<Notif>(null);
   const notifTimer = useRef<number | null>(null);
@@ -306,8 +307,11 @@ export default function Admin() {
         }}>{notif.msg}</div>
       )}
 
-      {/* Sidebar (right side for RTL) */}
-      <aside style={{ width: 256, background: CARD, borderLeft: `1px solid ${BORDER}`, padding: "24px 18px", display: "flex", flexDirection: "column", gap: 6, position: "sticky", top: 0, height: "100vh" }}>
+      {/* Sidebar backdrop */}
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 49 }} />}
+
+      {/* Sidebar overlay */}
+      <aside style={{ width: 256, background: CARD, borderLeft: `1px solid ${BORDER}`, padding: "24px 18px", display: "flex", flexDirection: "column", gap: 6, position: "fixed", top: 0, right: 0, height: "100vh", zIndex: 50, transform: sidebarOpen ? "translateX(0)" : "translateX(100%)", transition: "transform 0.25s ease" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 18, marginBottom: 14, borderBottom: `1px solid ${BORDER}` }}>
           <CrownIcon />
           <div>
@@ -318,33 +322,36 @@ export default function Admin() {
         </div>
 
         <button
-          onClick={() => setDarkMode(p => !p)}
+          onClick={() => { setDarkMode(p => !p); setSidebarOpen(false); }}
           title={darkMode ? "الوضع الصبحي" : "الوضع الليلي"}
           style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 8, border: `0.5px solid ${BORDER}`, background: "transparent", color: MUTED, cursor: "pointer", fontFamily: FONT, fontSize: 13, width: "100%", textAlign: "right" }}
         >
           {darkMode ? "☀️" : "🌙"}<span>{darkMode ? "الوضع الصبحي" : "الوضع الليلي"}</span>
         </button>
 
-        <NavBtn icon={<DashboardIcon />} label="لوحة التحكم" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
-        <NavBtn icon={<PackageIcon />} label="المنتجات" active={activeTab === "products"} onClick={() => setActiveTab("products")} />
+        <NavBtn icon={<DashboardIcon />} label="لوحة التحكم" active={activeTab === "dashboard"} onClick={() => { setActiveTab("dashboard"); setSidebarOpen(false); }} />
+        <NavBtn icon={<PackageIcon />} label="المنتجات" active={activeTab === "products"} onClick={() => { setActiveTab("products"); setSidebarOpen(false); }} />
         {activeTab === "products" && (
           <div style={{ paddingRight: 28, display: "flex", flexDirection: "column", gap: 4, marginBottom: 4 }}>
-            <SubBtn label="المرحلة الثانية" count={stage2Count} active={activeStage === 2} onClick={() => setActiveStage(2)} />
-            <SubBtn label="المرحلة الثالثة" count={stage3Count} active={activeStage === 3} onClick={() => setActiveStage(3)} />
+            <SubBtn label="المرحلة الثانية" count={stage2Count} active={activeStage === 2} onClick={() => { setActiveStage(2); setSidebarOpen(false); }} />
+            <SubBtn label="المرحلة الثالثة" count={stage3Count} active={activeStage === 3} onClick={() => { setActiveStage(3); setSidebarOpen(false); }} />
           </div>
         )}
-        <NavBtn icon={<OrderIcon />} label="الطلبات" active={activeTab === "orders"} onClick={() => setActiveTab("orders")} />
-        <NavBtn icon={<UsersIcon />} label="العملاء" active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
+        <NavBtn icon={<OrderIcon />} label="الطلبات" active={activeTab === "orders"} onClick={() => { setActiveTab("orders"); setSidebarOpen(false); }} />
+        <NavBtn icon={<UsersIcon />} label="العملاء" active={activeTab === "customers"} onClick={() => { setActiveTab("customers"); setSidebarOpen(false); }} />
         <NavBtn icon={<HomeIcon />} label="الموقع الرئيسي" onClick={() => router.push("/")} />
-        {isMainAdmin && <NavBtn icon={<span style={{ fontSize: 14 }}>🔐</span>} label="الجلسات" onClick={() => setShowSessionsModal(true)} />}
+        {isMainAdmin && <NavBtn icon={<span style={{ fontSize: 14 }}>🔐</span>} label="الجلسات" onClick={() => { setShowSessionsModal(true); setSidebarOpen(false); }} />}
 
         <div style={{ marginTop: "auto", paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
-          <NavBtn icon={<LogoutIcon />} label="تسجيل الخروج" danger onClick={logout} />
+          <NavBtn icon={<LogoutIcon />} label="تسجيل الخروج" danger onClick={() => { logout(); setSidebarOpen(false); }} />
         </div>
       </aside>
 
+      {/* Hamburger button */}
+      <button onClick={() => setSidebarOpen(p => !p)} style={{ position: "fixed", top: 16, right: 16, zIndex: 30, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: GOLD, fontSize: 18 }}>☰</button>
+
       {/* Main */}
-      <main style={{ flex: 1, padding: "28px 36px", overflowX: "hidden" }}>
+      <main style={{ flex: 1, padding: "28px 36px 28px 16px", overflowX: "hidden" }}>
         {loading && (
           <div style={{ display: "grid", placeItems: "center", padding: 80, color: GOLD }}>
             <div style={{ animation: "spin 1.6s linear infinite" }}><CrownIcon /></div>
