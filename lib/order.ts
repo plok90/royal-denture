@@ -182,6 +182,31 @@ export async function updateSettingsOrderStatus(id: string, status: string): Pro
   } catch { /* ignore */ }
 }
 
+export async function updateSettingsOrderAssignment(id: string, assignedTo: string): Promise<void> {
+  const supabase = createClient()
+  if (!supabase) return
+  try {
+    const { data } = await supabase.from("admin_settings").select("value").eq("key", SETTINGS_KEY).maybeSingle()
+    if (!data?.value) return
+    const orders: Order[] = JSON.parse(data.value).map((o: Order) =>
+      o.id === id ? { ...o, assigned_to: assignedTo, updated_at: new Date().toISOString() } : o
+    )
+    await supabase.from("admin_settings").upsert(
+      { key: SETTINGS_KEY, value: JSON.stringify(orders) },
+      { onConflict: "key", ignoreDuplicates: false }
+    )
+  } catch { /* ignore */ }
+}
+
+export async function updateSupabaseOrderAssignment(id: string, assignedTo: string): Promise<void> {
+  const supabase = createClient()
+  if (!supabase) return
+  const { error } = await supabase.from("orders").update({ assigned_to: assignedTo }).eq("id", id)
+  if (error) {
+    await updateSettingsOrderAssignment(id, assignedTo)
+  }
+}
+
 export function getCustomerData(orders: any[], products?: any[]): { phone: string; name: string; orderCount: number; total: number; lastOrder: string; stages: string }[] {
   const map = new Map<string, { name: string; orderCount: number; total: number; lastOrder: string; stages: Set<number> }>()
   for (const o of orders) {
@@ -264,6 +289,7 @@ export function exportOrdersToHTML(orders: any[], products?: any[]): string {
       <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${items}</td>
       <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${stage}</td>
       <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${(o.total || 0).toLocaleString("ar-IQ")} د.ع</td>
+      <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${o.assigned_to || "—"}</td>
       <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${o.status || ""}</td>
       <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${o.created_at ? new Date(o.created_at).toLocaleDateString("ar-IQ") : ""}</td>
     </tr>`

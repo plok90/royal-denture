@@ -6,7 +6,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAdmin } from "@/lib/admin-context";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { getLocalOrders, getSettingsOrders, removeLocalOrder, removeSettingsOrder, updateSettingsOrderStatus, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
+import { getLocalOrders, getSettingsOrders, removeLocalOrder, removeSettingsOrder, updateSettingsOrderStatus, updateSupabaseOrderAssignment, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
 
 // ─── Types ──────────────────────────────────────────────────────
 interface Product {
@@ -256,6 +256,17 @@ export default function Admin() {
     await updateOrderStatus(o.id, "تم");
   }
 
+  async function updateOrderAssignment(id: string, assignedTo: string) {
+    const supabase = createClient();
+    if (!supabase) { showNotification("error", "قاعدة البيانات غير مهيأة"); return; }
+    const { error } = await supabase.from("orders").update({ assigned_to: assignedTo }).eq("id", id);
+    if (error) {
+      await updateSupabaseOrderAssignment(id, assignedTo);
+    }
+    showNotification("success", "تم تحديث العامل");
+    await fetchData();
+  }
+
   async function logout() {
     adminLogout();
     router.push("/");
@@ -358,7 +369,7 @@ export default function Admin() {
         )}
 
         {!loading && activeTab === "orders" && (
-          <OrdersTab orders={orders} products={products} onStatusChange={updateOrderStatus} onSelect={setSelectedOrder} onDelete={deleteOrder} onComplete={completeOrder} onExport={() => { const html = exportOrdersToHTML(orders, products); downloadHTML(html, `orders-${new Date().toISOString().slice(0, 10)}`); }} />
+          <OrdersTab orders={orders} products={products} onStatusChange={updateOrderStatus} onSelect={setSelectedOrder} onDelete={deleteOrder} onComplete={completeOrder} onAssign={updateOrderAssignment} onExport={() => { const html = exportOrdersToHTML(orders, products); downloadHTML(html, `orders-${new Date().toISOString().slice(0, 10)}`); }} />
         )}
 
         {!loading && activeTab === "customers" && (
@@ -394,7 +405,7 @@ export default function Admin() {
 
       {/* Order Detail Modal */}
       {selectedOrder && (
-        <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} onComplete={completeOrder} onDelete={deleteOrder} />
+        <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} onComplete={completeOrder} onDelete={deleteOrder} onAssign={updateOrderAssignment} />
       )}
       {selectedCustomerPhone && (
         <CustomerOrdersModal orders={orders} phone={selectedCustomerPhone} onClose={() => setSelectedCustomerPhone(null)} onComplete={completeOrder} />
@@ -569,7 +580,9 @@ function getOrderStage(items: any[], products: Product[]): string {
   return "الثالثة"
 }
 
-function OrdersTab({ orders, products, onStatusChange, onSelect, onDelete, onComplete, onExport }: { orders: any[]; products: Product[]; onStatusChange: (id: string, status: string) => void; onSelect: (o: any) => void; onDelete: (id: string) => void; onComplete: (o: any) => void; onExport: () => void }) {
+const ASSIGNMENT_OPTIONS = ["مؤمل أحمد", "أحمد شاكر", "ياسين محمد"];
+
+function OrdersTab({ orders, products, onStatusChange, onSelect, onDelete, onComplete, onExport, onAssign }: { orders: any[]; products: Product[]; onStatusChange: (id: string, status: string) => void; onSelect: (o: any) => void; onDelete: (id: string) => void; onComplete: (o: any) => void; onExport: () => void; onAssign: (id: string, assignedTo: string) => void; }) {
   return (
     <>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
@@ -594,9 +607,13 @@ function OrdersTab({ orders, products, onStatusChange, onSelect, onDelete, onCom
               </div>
               <span style={{ color: MUTED, fontSize: 11 }}>{new Date(o.created_at).toLocaleDateString("ar-IQ")}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <span style={{ color: GOLD, fontSize: 13 }}>{o.total?.toLocaleString("ar-IQ")} د.ع</span>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <select value={o.assigned_to || ""} onChange={(e) => { e.stopPropagation(); onAssign(o.id, e.target.value); }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD2, color: TEXT, fontSize: 12, fontFamily: FONT, cursor: "pointer" }}>
+                  <option value="">من اشتغل؟</option>
+                  {ASSIGNMENT_OPTIONS.map(name => <option key={name} value={name}>{name}</option>)}
+                </select>
                 <select value={o.status} onChange={(e) => { e.stopPropagation(); onStatusChange(o.id, e.target.value); }} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD2, color: TEXT, fontSize: 12, fontFamily: FONT, cursor: "pointer" }}>
                   <option value="قيد المعالجة">قيد المعالجة</option>
                   <option value="تم">تم</option>
@@ -604,6 +621,11 @@ function OrdersTab({ orders, products, onStatusChange, onSelect, onDelete, onCom
                 <button onClick={(e) => { e.stopPropagation(); onDelete(o.id); }} style={cardBtnDanger()} title="حذف"><TrashIcon /></button>
               </div>
             </div>
+            {o.assigned_to && (
+              <div style={{ marginTop: 6, fontSize: 11, color: MUTED }}>
+                👤 {o.assigned_to}
+              </div>
+            )}
           </div>
         ))}
         {orders.length === 0 && <div style={emptyBox()}>لا توجد طلبات بعد</div>}
@@ -681,6 +703,7 @@ function CustomerOrdersModal({ orders, phone, onClose, onComplete }: { orders: a
           <div>
             <span style={{ color: TEXT }}>{new Date(o.created_at).toLocaleDateString("ar-IQ")}</span>
             <span style={{ color: MUTED, marginRight: 8, fontSize: 11 }}>{o.status}</span>
+            {o.assigned_to && <span style={{ color: GOLD, marginRight: 8, fontSize: 11 }}>👤 {o.assigned_to}</span>}
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <span style={{ color: GOLD, fontWeight: 600 }}>{o.total?.toLocaleString("ar-IQ")} د.ع</span>
@@ -758,13 +781,20 @@ function ProductModal({ product, isNew, uploading, isSaving, onChange, onClose, 
   );
 }
 
-function OrderDetailModal({ order, onClose, onComplete, onDelete }: { order: any; onClose: () => void; onComplete: (o: any) => void; onDelete: (id: string) => void }) {
+function OrderDetailModal({ order, onClose, onComplete, onDelete, onAssign }: { order: any; onClose: () => void; onComplete: (o: any) => void; onDelete: (id: string) => void; onAssign?: (id: string, assignedTo: string) => void }) {
   if (!order) return null;
   return (
     <ModalShell title={`طلب من ${order.customer_name}`} onClose={onClose}>
       <div style={{ marginBottom: 16 }}>
         <div style={{ color: MUTED, fontSize: 11, marginBottom: 4 }}>العميل</div>
         <div style={{ color: TEXT, fontSize: 14 }}>{order.customer_name} — {order.customer_phone}</div>
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ color: MUTED, fontSize: 11, marginBottom: 4 }}>اشتغل عليه</div>
+        <select value={order.assigned_to || ""} onChange={(e) => { if (onAssign) { onAssign(order.id, e.target.value); } }} style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD2, color: TEXT, fontSize: 13, fontFamily: FONT, cursor: "pointer", width: "100%", boxSizing: "border-box" }}>
+          <option value="">اختر...</option>
+          {ASSIGNMENT_OPTIONS.map(name => <option key={name} value={name}>{name}</option>)}
+        </select>
       </div>
       {order.notes && (
         <div style={{ marginBottom: 16 }}>

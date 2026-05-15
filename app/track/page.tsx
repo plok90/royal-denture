@@ -110,6 +110,7 @@ export default function TrackPage() {
 
             <div style={{ fontSize: 13, color: MUTED, marginBottom: 10, fontFamily: FONT }}>
               {o.customer_name}
+              {o.assigned_to && <span style={{ color: GOLD, marginRight: 10, fontSize: 12 }}>👤 {o.assigned_to}</span>}
             </div>
 
             {Array.isArray(o.items) && o.items.map((item: any, i: number) => (

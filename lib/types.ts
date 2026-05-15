@@ -41,6 +41,7 @@ export interface Order {
   items: { product_id: string; name: string; name_ar: string; quantity: number; price: number }[]
   total: number
   status: string
+  assigned_to?: string
   created_at: string
   updated_at: string
 }
