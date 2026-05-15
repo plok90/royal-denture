@@ -14,6 +14,7 @@ interface SessionData {
 interface AdminContextType {
   isAdmin: boolean
   currentAdmin: { name: string; username: string } | null
+  isMainAdmin: boolean
   showLoginModal: boolean
   setShowLoginModal: (value: boolean) => void
   isInitialized: boolean
@@ -25,7 +26,12 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined)
 
-const FALLBACK_CREDENTIALS = [{ name: "المدير", username: "moamel@2005", password: "plokplok09" }]
+const FALLBACK_CREDENTIALS = [
+  { name: "مؤمل أحمد", username: "moamel@2005", password: "abasAS@1977" },
+  { name: "أحمد شاكر", username: "ahmed-shaker", password: "sara@2006" },
+  { name: "ياسين محمد", username: "yaseen-mohammed", password: "aya@2006" },
+]
+const MAIN_ADMIN_USERNAME = "moamel@2005"
 const SESSIONS_KEY = "admin_sessions"
 const CREDENTIALS_KEY = "admin_credentials"
 
@@ -56,6 +62,7 @@ async function writeSessions(supabase: NonNullable<ReturnType<typeof createClien
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentAdmin, setCurrentAdmin] = useState<{ name: string; username: string } | null>(null)
+  const [isMainAdmin, setIsMainAdmin] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [sessions, setSessions] = useState<SessionData[]>([])
@@ -75,6 +82,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           if (match) {
             setIsAdmin(true)
             setCurrentAdmin({ name: match.name, username: match.username })
+            setIsMainAdmin(match.username === MAIN_ADMIN_USERNAME)
           }
         }
       } catch { /* ignore */ }
@@ -113,6 +121,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("rd_admin_session", JSON.stringify({ token, name: match.name }))
     setIsAdmin(true)
     setCurrentAdmin({ name: match.name, username: match.username })
+    setIsMainAdmin(match.username === MAIN_ADMIN_USERNAME)
     return { success: true }
   }, [])
 
@@ -133,6 +142,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("rd_admin_session")
     setIsAdmin(false)
     setCurrentAdmin(null)
+    setIsMainAdmin(false)
   }, [])
 
   const logoutSession = useCallback(async (token: string) => {
@@ -150,6 +160,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem("rd_admin_session")
           setIsAdmin(false)
           setCurrentAdmin(null)
+          setIsMainAdmin(false)
         }
       }
     } catch { /* ignore */ }
@@ -159,6 +170,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     <AdminContext.Provider value={{
       isAdmin,
       currentAdmin,
+      isMainAdmin,
       showLoginModal,
       setShowLoginModal,
       isInitialized,

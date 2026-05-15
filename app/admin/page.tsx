@@ -70,7 +70,7 @@ const blankProduct: Omit<Product, "id"> = {
 
 export default function Admin() {
   const router = useRouter();
-  const { isAdmin, isInitialized, currentAdmin, logout: adminLogout, sessions, logoutSession } = useAdmin();
+  const { isAdmin, isInitialized, currentAdmin, isMainAdmin, logout: adminLogout, sessions, logoutSession } = useAdmin();
   const [darkMode, setDarkMode] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -336,7 +336,7 @@ export default function Admin() {
         <NavBtn icon={<OrderIcon />} label="الطلبات" active={activeTab === "orders"} onClick={() => setActiveTab("orders")} />
         <NavBtn icon={<UsersIcon />} label="العملاء" active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
         <NavBtn icon={<HomeIcon />} label="الموقع الرئيسي" onClick={() => router.push("/")} />
-        <NavBtn icon={<span style={{ fontSize: 14 }}>🔐</span>} label="الجلسات" onClick={() => setShowSessionsModal(true)} />
+        {isMainAdmin && <NavBtn icon={<span style={{ fontSize: 14 }}>🔐</span>} label="الجلسات" onClick={() => setShowSessionsModal(true)} />}
 
         <div style={{ marginTop: "auto", paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
           <NavBtn icon={<LogoutIcon />} label="تسجيل الخروج" danger onClick={logout} />
@@ -413,7 +413,7 @@ export default function Admin() {
       {selectedCustomerPhone && (
         <CustomerOrdersModal orders={orders} phone={selectedCustomerPhone} onClose={() => setSelectedCustomerPhone(null)} onComplete={completeOrder} />
       )}
-      {showSessionsModal && (
+      {showSessionsModal && isMainAdmin && (
         <SessionsModal sessions={sessions} currentToken={(() => { try { const s = localStorage.getItem("rd_admin_session"); return s ? JSON.parse(s).token : null; } catch { return null; } })()} onClose={() => setShowSessionsModal(false)} onLogoutSession={logoutSession} />
       )}
     </div>
