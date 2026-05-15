@@ -59,7 +59,7 @@ const EyeOffIcon = () => ic("M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8
 const XIcon = () => ic("M18 6L6 18 M6 6l12 12");
 const SaveIcon = () => ic("M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z M17 21v-8H7v8 M7 3v5h8");
 
-type Tab = "dashboard" | "products" | "orders" | "customers";
+type Tab = "dashboard" | "products" | "orders" | "customers" | "settings";
 type Notif = { type: "success" | "error"; msg: string } | null;
 
 const blankProduct: Omit<Product, "id"> = {
@@ -93,6 +93,7 @@ export default function Admin() {
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; type: "product" | "order" } | null>(null);
   const [showSessionsModal, setShowSessionsModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
 
   const [notif, setNotif] = useState<Notif>(null);
   const notifTimer = useRef<number | null>(null);
@@ -124,15 +125,21 @@ export default function Admin() {
       try { await supabase.from("orders").update({ status: "قيد المعالجة" }).eq("status", "جديد"); } catch {}
       localStorage.setItem("rd_migrated_status", "1");
     }
-    const [p, o] = await Promise.all([
+    const [p, o, s] = await Promise.all([
       supabase.from("products").select("*").order("sort_order", { ascending: true }),
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
+      supabase.from("admin_settings").select("key, value"),
     ]);
     if (!p.error) setProducts((p.data as Product[]) || []);
     if (!o.error) setOrders((o.data as any[]) || []);
     else {
       const fromSettings = await getSettingsOrders();
       setOrders(fromSettings.length ? fromSettings : getLocalOrders());
+    }
+    if (!s.error && s.data) {
+      const settingsMap: Record<string, string> = {};
+      (s.data as any[]).forEach(r => { settingsMap[r.key] = r.value; });
+      if (settingsMap.whatsapp_number) setWhatsappNumber(settingsMap.whatsapp_number);
     }
     setLoading(false);
   }
@@ -269,6 +276,18 @@ export default function Admin() {
     await fetchData();
   }
 
+  async function saveWhatsappNumber(number: string) {
+    const supabase = createClient();
+    if (!supabase) { showNotification("error", "قاعدة البيانات غير مهيأة"); return; }
+    const { error } = await supabase.from("admin_settings").upsert(
+      { key: "whatsapp_number", value: number },
+      { onConflict: "key", ignoreDuplicates: false }
+    );
+    if (error) { showNotification("error", error.message); return; }
+    setWhatsappNumber(number);
+    showNotification("success", "تم حفظ رقم واتساب");
+  }
+
   async function logout() {
     adminLogout();
     router.push("/");
@@ -341,6 +360,7 @@ export default function Admin() {
         <NavBtn icon={<UsersIcon />} label="العملاء" active={activeTab === "customers"} onClick={() => { setActiveTab("customers"); setSidebarOpen(false); }} />
         <NavBtn icon={<HomeIcon />} label="الموقع الرئيسي" onClick={() => router.push("/")} />
         {isMainAdmin && <NavBtn icon={<span style={{ fontSize: 14 }}>🔐</span>} label="الجلسات" onClick={() => { setShowSessionsModal(true); setSidebarOpen(false); }} />}
+        {isMainAdmin && <NavBtn icon={<span style={{ fontSize: 14 }}>⚙️</span>} label="الإعدادات" active={activeTab === "settings"} onClick={() => { setActiveTab("settings"); setSidebarOpen(false); }} />}
 
         <div style={{ marginTop: "auto", paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
           <NavBtn icon={<LogoutIcon />} label="تسجيل الخروج" danger onClick={() => { logout(); setSidebarOpen(false); }} />
@@ -384,6 +404,10 @@ export default function Admin() {
 
         {!loading && activeTab === "customers" && (
           <CustomersTab orders={orders} products={products} onCustomerClick={(phone) => setSelectedCustomerPhone(phone)} onComplete={completeOrder} />
+        )}
+
+        {!loading && activeTab === "settings" && isMainAdmin && (
+          <SettingsTab whatsappNumber={whatsappNumber} onUpdate={saveWhatsappNumber} />
         )}
 
       </main>
@@ -730,6 +754,27 @@ function CustomerOrdersModal({ orders, phone, onClose, onComplete }: { orders: a
       ))}
       {customerOrders.length === 0 && <div style={{ color: MUTED, textAlign: "center", padding: 20 }}>لا توجد طلبات</div>}
     </ModalShell>
+  );
+}
+
+function SettingsTab({ whatsappNumber, onUpdate }: { whatsappNumber: string; onUpdate: (v: string) => Promise<void> }) {
+  const [value, setValue] = useState(whatsappNumber);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { setValue(whatsappNumber); }, [whatsappNumber]);
+  return (
+    <>
+      <header style={{ marginBottom: 24 }}>
+        <h1 style={{ color: TEXT, fontSize: 24, margin: 0, fontFamily: "serif" }}>الإعدادات</h1>
+        <p style={{ color: MUTED, fontSize: 13, margin: "4px 0 0", letterSpacing: 1 }}">إعدادات الموقع العامة</p>
+      </header>
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 20, maxWidth: 400 }}>
+        <label style={fieldLabel()}>رقم واتساب</label>
+        <input dir="ltr" value={value} onChange={(e) => setValue(e.target.value)} style={inputStyle()} placeholder="964xxxxxxxxx" />
+        <button onClick={async () => { setSaving(true); await onUpdate(value); setSaving(false); }} disabled={saving} style={{ ...primaryBtn(), marginTop: 12, opacity: saving ? 0.6 : 1 }}>
+          {saving ? "جارٍ الحفظ..." : "💾 حفظ"}
+        </button>
+      </div>
+    </>
   );
 }
 
