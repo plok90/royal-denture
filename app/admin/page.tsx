@@ -351,7 +351,7 @@ export default function Admin() {
       <button onClick={() => setSidebarOpen(p => !p)} style={{ position: "fixed", top: 16, right: 16, zIndex: 30, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 12px", cursor: "pointer", color: GOLD, fontSize: 18 }}>☰</button>
 
       {/* Main */}
-      <main style={{ flex: 1, padding: "28px 56px 28px 16px", overflowX: "hidden" }}>
+      <main style={{ flex: 1, padding: "28px 66px 28px 16px", overflowX: "hidden" }}>
         {loading && (
           <div style={{ display: "grid", placeItems: "center", padding: 80, color: GOLD }}>
             <div style={{ animation: "spin 1.6s linear infinite" }}><CrownIcon /></div>
