@@ -70,7 +70,7 @@ const blankProduct: Omit<Product, "id"> = {
 
 export default function Admin() {
   const router = useRouter();
-  const { isAdmin, isInitialized, logout: adminLogout } = useAdmin();
+  const { isAdmin, isInitialized, currentAdmin, logout: adminLogout, sessions, logoutSession } = useAdmin();
   const [darkMode, setDarkMode] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -91,6 +91,7 @@ export default function Admin() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; type: "product" | "order" } | null>(null);
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
 
   const [notif, setNotif] = useState<Notif>(null);
   const notifTimer = useRef<number | null>(null);
@@ -312,6 +313,7 @@ export default function Admin() {
           <div>
             <div style={{ color: GOLD, fontSize: 16, fontWeight: 700, letterSpacing: 2, fontFamily: "serif" }}>ROYAL DENTURE</div>
             <div style={{ fontSize: 10, color: MUTED, marginTop: 2, letterSpacing: 1 }}>لوحة التحكم</div>
+            {currentAdmin && <div style={{ fontSize: 10, color: GOLD, marginTop: 2 }}>👤 {currentAdmin.name}</div>}
           </div>
         </div>
 
@@ -334,6 +336,7 @@ export default function Admin() {
         <NavBtn icon={<OrderIcon />} label="الطلبات" active={activeTab === "orders"} onClick={() => setActiveTab("orders")} />
         <NavBtn icon={<UsersIcon />} label="العملاء" active={activeTab === "customers"} onClick={() => setActiveTab("customers")} />
         <NavBtn icon={<HomeIcon />} label="الموقع الرئيسي" onClick={() => router.push("/")} />
+        <NavBtn icon={<span style={{ fontSize: 14 }}>🔐</span>} label="الجلسات" onClick={() => setShowSessionsModal(true)} />
 
         <div style={{ marginTop: "auto", paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
           <NavBtn icon={<LogoutIcon />} label="تسجيل الخروج" danger onClick={logout} />
@@ -409,6 +412,9 @@ export default function Admin() {
       )}
       {selectedCustomerPhone && (
         <CustomerOrdersModal orders={orders} phone={selectedCustomerPhone} onClose={() => setSelectedCustomerPhone(null)} onComplete={completeOrder} />
+      )}
+      {showSessionsModal && (
+        <SessionsModal sessions={sessions} currentToken={(() => { try { const s = localStorage.getItem("rd_admin_session"); return s ? JSON.parse(s).token : null; } catch { return null; } })()} onClose={() => setShowSessionsModal(false)} onLogoutSession={logoutSession} />
       )}
     </div>
   );
@@ -828,6 +834,30 @@ function OrderDetailModal({ order, onClose, onComplete, onDelete, onAssign }: { 
       <div style={{ marginTop: 14, color: MUTED, fontSize: 11, textAlign: "center" }}>
         {new Date(order.created_at).toLocaleString("ar-IQ")}
       </div>
+    </ModalShell>
+  );
+}
+
+function SessionsModal({ sessions, currentToken, onClose, onLogoutSession }: { sessions: any[]; currentToken: string | null; onClose: () => void; onLogoutSession: (token: string) => void }) {
+  return (
+    <ModalShell title="الجلسات النشطة" onClose={onClose}>
+      <div style={{ marginBottom: 14, color: MUTED, fontSize: 12 }}>{sessions.length} جلسة نشطة</div>
+      {sessions.map((s, i) => (
+        <div key={s.token} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
+          <div>
+            <div style={{ color: TEXT }}><span style={{ color: MUTED }}>#{i + 1}</span> 👤 {s.name}</div>
+            <div style={{ color: MUTED, fontSize: 11, marginTop: 2 }}>{s.device} — {new Date(s.created_at).toLocaleString("ar-IQ")}</div>
+          </div>
+          {s.token === currentToken ? (
+            <span style={{ color: GREEN, fontSize: 11, fontWeight: 600 }}>✓ الحالية</span>
+          ) : (
+            <button onClick={() => { if (confirm("إنهاء هذه الجلسة؟")) { onLogoutSession(s.token); } }} style={{ padding: "5px 10px", borderRadius: 6, border: "none", background: RED, color: "#fff", fontSize: 11, cursor: "pointer", fontFamily: FONT }}>
+              إنهاء
+            </button>
+          )}
+        </div>
+      ))}
+      {sessions.length === 0 && <div style={{ color: MUTED, textAlign: "center", padding: 20 }}>لا توجد جلسات نشطة</div>}
     </ModalShell>
   );
 }

@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAdmin, validateAdmin } from "@/lib/admin-context"
+import { useAdmin } from "@/lib/admin-context"
 import { XIcon } from "./icons"
 
 export function AdminLoginModal() {
-  const { showLoginModal, setShowLoginModal, setIsAdmin } = useAdmin()
+  const { showLoginModal, setShowLoginModal, login } = useAdmin()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -20,16 +20,15 @@ export function AdminLoginModal() {
     setError("")
     setIsLoading(true)
 
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const result = await login(username, password)
 
-    if (validateAdmin(username, password)) {
-      setIsAdmin(true)
+    if (result.success) {
       setShowLoginModal(false)
       setUsername("")
       setPassword("")
       router.push("/admin")
     } else {
-      setError("اسم المستخدم أو كلمة المرور غير صحيحة")
+      setError(result.error || "اسم المستخدم أو كلمة المرور غير صحيحة")
     }
     setIsLoading(false)
   }
