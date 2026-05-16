@@ -6,7 +6,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAdmin } from "@/lib/admin-context";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { getLocalOrders, getSettingsOrders, removeLocalOrder, removeSettingsOrder, updateSettingsOrderStatus, updateSupabaseOrderAssignment, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
+import { getLocalOrders, getSettingsOrders, removeLocalOrder, removeSettingsOrder, updateSettingsOrderStatus, updateSupabaseOrderAssignment, updateSettingsOrderInternalNotes, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
 
 // ─── Types ──────────────────────────────────────────────────────
 interface Product {
@@ -59,7 +59,7 @@ const EyeOffIcon = () => ic("M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8
 const XIcon = () => ic("M18 6L6 18 M6 6l12 12");
 const SaveIcon = () => ic("M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z M17 21v-8H7v8 M7 3v5h8");
 
-type Tab = "dashboard" | "products" | "orders" | "customers" | "settings";
+type Tab = "dashboard" | "products" | "orders" | "customers" | "settings" | "mycases";
 type Notif = { type: "success" | "error"; msg: string } | null;
 
 const blankProduct: Omit<Product, "id"> = {
@@ -289,6 +289,17 @@ export default function Admin() {
     showNotification("success", "تم حفظ رقم واتساب");
   }
 
+  async function saveInternalNotes(id: string, notes: string) {
+    const supabase = createClient();
+    if (!supabase) { showNotification("error", "قاعدة البيانات غير مهيأة"); return; }
+    const { error } = await supabase.from("orders").update({ internal_notes: notes }).eq("id", id);
+    if (error) {
+      await updateSettingsOrderInternalNotes(id, notes);
+    }
+    showNotification("success", "تم حفظ الملاحظات");
+    await fetchData();
+  }
+
   async function logout() {
     adminLogout();
     router.push("/");
@@ -358,6 +369,7 @@ export default function Admin() {
           </div>
         )}
         <NavBtn icon={<OrderIcon />} label="الطلبات" active={activeTab === "orders"} onClick={() => { setActiveTab("orders"); setSidebarOpen(false); }} />
+        <NavBtn icon={<span style={{ fontSize: 14 }}>📋</span>} label="حالاتي" active={activeTab === "mycases"} onClick={() => { setActiveTab("mycases"); setSidebarOpen(false); }} />
         <NavBtn icon={<UsersIcon />} label="العملاء" active={activeTab === "customers"} onClick={() => { setActiveTab("customers"); setSidebarOpen(false); }} />
         <NavBtn icon={<HomeIcon />} label="الموقع الرئيسي" onClick={() => router.push("/")} />
         {isMainAdmin && <NavBtn icon={<span style={{ fontSize: 14 }}>🔐</span>} label="الجلسات" onClick={() => { setShowSessionsModal(true); setSidebarOpen(false); }} />}
@@ -403,6 +415,10 @@ export default function Admin() {
           <OrdersTab orders={orders} products={products} onStatusChange={updateOrderStatus} onSelect={setSelectedOrder} onDelete={deleteOrder} onComplete={completeOrder} onAssign={updateOrderAssignment} onExport={() => { const html = exportOrdersToHTML(orders, products); downloadHTML(html, `orders-${new Date().toISOString().slice(0, 10)}`); }} />
         )}
 
+        {!loading && activeTab === "mycases" && currentAdmin && (
+          <MyCasesTab orders={orders.filter(o => o.assigned_to === currentAdmin.name)} products={products} onSelect={setSelectedOrder} />
+        )}
+
         {!loading && activeTab === "customers" && (
           <CustomersTab orders={orders} products={products} onCustomerClick={(phone) => setSelectedCustomerPhone(phone)} onComplete={completeOrder} />
         )}
@@ -440,7 +456,7 @@ export default function Admin() {
 
       {/* Order Detail Modal */}
       {selectedOrder && (
-        <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} onComplete={completeOrder} onDelete={deleteOrder} onAssign={updateOrderAssignment} />
+        <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} onComplete={completeOrder} onDelete={deleteOrder} onAssign={updateOrderAssignment} onSaveInternalNotes={saveInternalNotes} />
       )}
       {selectedCustomerPhone && (
         <CustomerOrdersModal orders={orders} phone={selectedCustomerPhone} onClose={() => setSelectedCustomerPhone(null)} onComplete={completeOrder} />
@@ -664,6 +680,11 @@ function OrdersTab({ orders, products, onStatusChange, onSelect, onDelete, onCom
                 👤 {o.assigned_to}
               </div>
             )}
+            {o.internal_notes && (
+              <div style={{ marginTop: 4, fontSize: 11, color: MUTED }}>
+                📝 {o.internal_notes.length > 50 ? o.internal_notes.slice(0, 50) + "..." : o.internal_notes}
+              </div>
+            )}
           </div>
         ))}
         {orders.length === 0 && <div style={emptyBox()}>لا توجد طلبات بعد</div>}
@@ -728,6 +749,38 @@ function CustomersTab({ orders, products, onCustomerClick, onComplete }: { order
 function thStyle(): React.CSSProperties { return { textAlign: "right", padding: "10px 12px", fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }; }
 function tdStyle(): React.CSSProperties { return { padding: "12px", color: TEXT }; }
 
+function MyCasesTab({ orders, products, onSelect }: { orders: any[]; products: Product[]; onSelect: (o: any) => void }) {
+  return (
+    <>
+      <header style={{ marginBottom: 24 }}>
+        <h1 style={{ color: TEXT, fontSize: 24, margin: 0, fontFamily: "serif" }}>حالاتي</h1>
+        <p style={{ color: MUTED, fontSize: 13, margin: "4px 0 0", letterSpacing: 1 }}>{orders.length} حالة</p>
+      </header>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {orders.map((o: any) => (
+          <div key={o.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, cursor: "pointer" }} onClick={() => onSelect(o)}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div>
+                <span style={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>{o.customer_name}</span>
+                <span style={{ color: MUTED, fontSize: 12, marginRight: 10 }}>{o.customer_phone}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: getOrderStage(o.items, products) === "الثانية" ? `${GOLD}33` : `${MUTED}44`, color: getOrderStage(o.items, products) === "الثانية" ? GOLD : MUTED, marginRight: 6 }}>
+                  {getOrderStage(o.items, products)}
+                </span>
+              </div>
+              <span style={{ color: MUTED, fontSize: 11 }}>{new Date(o.created_at).toLocaleDateString("ar-IQ")}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: GOLD, fontSize: 13 }}>{o.total?.toLocaleString("ar-IQ")} د.ع</span>
+              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: o.status === "تم" ? `${GREEN}33` : `${GOLD}33`, color: o.status === "تم" ? GREEN : GOLD }}>{o.status}</span>
+            </div>
+            {o.internal_notes && <div style={{ marginTop: 6, fontSize: 11, color: MUTED }}>📝 {o.internal_notes}</div>}
+          </div>
+        ))}
+        {orders.length === 0 && <div style={emptyBox()}>لا توجد حالات بعد</div>}
+      </div>
+    </>
+  );
+}
 
 // ─── Modals ────────────────────────────────────────────────────
 function CustomerOrdersModal({ orders, phone, onClose, onComplete }: { orders: any[]; phone: string; onClose: () => void; onComplete: (o: any) => void }) {
@@ -840,8 +893,11 @@ function ProductModal({ product, isNew, uploading, isSaving, onChange, onClose, 
   );
 }
 
-function OrderDetailModal({ order, onClose, onComplete, onDelete, onAssign }: { order: any; onClose: () => void; onComplete: (o: any) => void; onDelete: (id: string) => void; onAssign?: (id: string, assignedTo: string) => void }) {
+function OrderDetailModal({ order, onClose, onComplete, onDelete, onAssign, onSaveInternalNotes }: { order: any; onClose: () => void; onComplete: (o: any) => void; onDelete: (id: string) => void; onAssign?: (id: string, assignedTo: string) => void; onSaveInternalNotes?: (id: string, notes: string) => Promise<void> }) {
   if (!order) return null;
+  const [internalNotes, setInternalNotes] = useState(order.internal_notes || "");
+  const [savingNotes, setSavingNotes] = useState(false);
+  useEffect(() => { setInternalNotes(order.internal_notes || ""); }, [order.internal_notes]);
   return (
     <ModalShell title={`طلب من ${order.customer_name}`} onClose={onClose}>
       <div style={{ marginBottom: 16 }}>
@@ -855,9 +911,16 @@ function OrderDetailModal({ order, onClose, onComplete, onDelete, onAssign }: { 
           {ASSIGNMENT_OPTIONS.map(name => <option key={name} value={name}>{name}</option>)}
         </select>
       </div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ color: MUTED, fontSize: 11, marginBottom: 4 }}>ملاحظات داخلية (للمكتب فقط)</div>
+        <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={3} style={{ width: "100%", padding: "9px 11px", borderRadius: 8, border: `1px solid ${BORDER}`, background: CARD2, color: TEXT, fontFamily: "inherit", fontSize: 13, boxSizing: "border-box", resize: "vertical" }} placeholder="ملاحظات لا تظهر للعميل..." />
+        <button onClick={async () => { setSavingNotes(true); if (onSaveInternalNotes) await onSaveInternalNotes(order.id, internalNotes); setSavingNotes(false); }} disabled={savingNotes} style={{ ...primaryBtn(), marginTop: 8, opacity: savingNotes ? 0.6 : 1, fontSize: 12 }}>
+          {savingNotes ? "جارٍ الحفظ..." : "💾 حفظ الملاحظات"}
+        </button>
+      </div>
       {order.notes && (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ color: MUTED, fontSize: 11, marginBottom: 4 }}>ملاحظات</div>
+          <div style={{ color: MUTED, fontSize: 11, marginBottom: 4 }}>ملاحظات العميل</div>
           <div style={{ color: TEXT, fontSize: 13 }}>{order.notes}</div>
         </div>
       )}

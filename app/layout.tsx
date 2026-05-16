@@ -14,7 +14,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'ROYAL DENTURE - مختبر الأسنان الملكي',
+  title: 'ROYAL DENTURE',
   description: 'مختبر الأسنان الملكي - اختر ما يناسبك والباقي علينا. خدمات طب الأسنان بجودة عالية.',
   generator: 'v0.app',
   manifest: '/manifest.json',

@@ -42,6 +42,7 @@ export interface Order {
   total: number
   status: string
   assigned_to?: string
+  internal_notes?: string
   created_at: string
   updated_at: string
 }
