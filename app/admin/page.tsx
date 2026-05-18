@@ -6,7 +6,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useAdmin } from "@/lib/admin-context";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { getLocalOrders, getSettingsOrders, removeLocalOrder, removeSettingsOrder, updateSettingsOrderStatus, updateSupabaseOrderAssignment, updateSettingsOrderInternalNotes, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML } from "@/lib/order";
+import { getLocalOrders, getSettingsOrders, removeLocalOrder, removeSettingsOrder, updateSettingsOrderStatus, updateSupabaseOrderAssignment, updateSettingsOrderInternalNotes, buildCompletionMessage, getCustomerData, getOrderStats, exportOrdersToHTML, migrateOrdersCaseIds } from "@/lib/order";
 
 // ─── Types ──────────────────────────────────────────────────────
 interface Product {
@@ -124,6 +124,11 @@ export default function Admin() {
     if (typeof window !== "undefined" && !localStorage.getItem("rd_migrated_status")) {
       try { await supabase.from("orders").update({ status: "قيد المعالجة" }).eq("status", "جديد"); } catch {}
       localStorage.setItem("rd_migrated_status", "1");
+    }
+    // One-time migration: assign case_ids to orders without them
+    if (typeof window !== "undefined" && !localStorage.getItem("rd_migrated_case_ids")) {
+      await migrateOrdersCaseIds();
+      localStorage.setItem("rd_migrated_case_ids", "1");
     }
     const [p, o, s] = await Promise.all([
       supabase.from("products").select("*").order("sort_order", { ascending: true }),
@@ -653,6 +658,7 @@ function OrdersTab({ orders, products, onStatusChange, onSelect, onDelete, onCom
           <div key={o.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16 }} onClick={() => onSelect(o)}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: `${GOLD}44`, color: GOLD, marginRight: 8 }}>#{o.case_id || "—"}</span>
                 <span style={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>{o.customer_name}</span>
                 <span style={{ color: MUTED, fontSize: 12, marginRight: 10 }}>{o.customer_phone}</span>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: getOrderStage(o.items, products) === "الثانية" ? `${GOLD}33` : `${MUTED}44`, color: getOrderStage(o.items, products) === "الثانية" ? GOLD : MUTED, marginRight: 6 }}>
@@ -761,6 +767,7 @@ function MyCasesTab({ orders, products, onSelect }: { orders: any[]; products: P
           <div key={o.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, cursor: "pointer" }} onClick={() => onSelect(o)}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: `${GOLD}44`, color: GOLD, marginRight: 8 }}>#{o.case_id || "—"}</span>
                 <span style={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>{o.customer_name}</span>
                 <span style={{ color: MUTED, fontSize: 12, marginRight: 10 }}>{o.customer_phone}</span>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: getOrderStage(o.items, products) === "الثانية" ? `${GOLD}33` : `${MUTED}44`, color: getOrderStage(o.items, products) === "الثانية" ? GOLD : MUTED, marginRight: 6 }}>
@@ -792,6 +799,7 @@ function CustomerOrdersModal({ orders, phone, onClose, onComplete }: { orders: a
       {customerOrders.map(o => (
         <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 13 }}>
           <div>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 99, background: `${GOLD}44`, color: GOLD, marginRight: 6 }}>#{o.case_id || "—"}</span>
             <span style={{ color: TEXT }}>{new Date(o.created_at).toLocaleDateString("ar-IQ")}</span>
             <span style={{ color: MUTED, marginRight: 8, fontSize: 11 }}>{o.status}</span>
             {o.assigned_to && <span style={{ color: GOLD, marginRight: 8, fontSize: 11 }}>👤 {o.assigned_to}</span>}

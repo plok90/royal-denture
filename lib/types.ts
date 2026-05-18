@@ -35,6 +35,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string
+  case_id?: string
   customer_name: string
   customer_phone: string
   notes: string

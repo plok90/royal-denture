@@ -57,6 +57,16 @@ export function buildCompletionMessage(
 const LOCAL_ORDERS_KEY = "rd_orders_fallback"
 const SETTINGS_KEY = "rd_orders"
 
+function generateCaseId(existingIds: string[]): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  for (let i = 0; i < 100; i++) {
+    const id = chars[Math.floor(Math.random() * chars.length)] + chars[Math.floor(Math.random() * chars.length)]
+    if (!existingIds.includes(id)) return id
+  }
+  const ts = Date.now().toString(36).toUpperCase().slice(-2)
+  return ts
+}
+
 export async function saveOrder(
   name: string,
   phone: string,
@@ -64,8 +74,21 @@ export async function saveOrder(
   items: { product_id: string; name: string; name_ar: string; quantity: number; price: number }[],
   total: number,
 ): Promise<void> {
-  const order = buildOrder(name, phone, notes, items, total)
   const supabase = createClient()
+  let existingIds: string[] = []
+  if (supabase) {
+    const { data } = await supabase.from("orders").select("case_id")
+    if (data) existingIds = (data as any[]).map(o => o.case_id).filter(Boolean)
+    const { data: s } = await supabase.from("admin_settings").select("value").eq("key", SETTINGS_KEY).maybeSingle()
+    if (s?.value) {
+      const fallback = JSON.parse(s.value) as Order[]
+      fallback.forEach(o => { if (o.case_id) existingIds.push(o.case_id) })
+    }
+  }
+  const local = getLocalOrders()
+  local.forEach(o => { if (o.case_id) existingIds.push(o.case_id) })
+  const caseId = generateCaseId(existingIds)
+  const order = buildOrder(name, phone, notes, items, total, caseId)
   if (supabase) {
     const { error } = await supabase.from("orders").insert(order)
     if (!error) {
@@ -97,7 +120,17 @@ export async function getSettingsOrders(): Promise<Order[]> {
   if (!supabase) return []
   try {
     const { data } = await supabase.from("admin_settings").select("value").eq("key", SETTINGS_KEY).maybeSingle()
-    return data?.value ? JSON.parse(data.value) : []
+    const orders: Order[] = data?.value ? JSON.parse(data.value) : []
+    let changed = false
+    const existing = orders.map(o => o.case_id).filter(Boolean)
+    orders.forEach(o => { if (!o.case_id) { o.case_id = generateCaseId(existing); changed = true; existing.push(o.case_id) } })
+    if (changed) {
+      await supabase.from("admin_settings").upsert(
+        { key: SETTINGS_KEY, value: JSON.stringify(orders) },
+        { onConflict: "key", ignoreDuplicates: false }
+      )
+    }
+    return orders
   } catch { return [] }
 }
 
@@ -107,9 +140,11 @@ function buildOrder(
   notes: string,
   items: { product_id: string; name: string; name_ar: string; quantity: number; price: number }[],
   total: number,
+  caseId: string,
 ): Order {
   return {
     id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    case_id: caseId,
     customer_name: name,
     customer_phone: phone,
     notes,
@@ -134,10 +169,10 @@ export function getLocalOrders(): Order[] {
   try {
     const raw = localStorage.getItem(LOCAL_ORDERS_KEY)
     let orders: Order[] = raw ? JSON.parse(raw) : []
-    // Migrate old "جديد" status to "قيد المعالجة"
     let changed = false
     orders = orders.map(o => {
-      if (o.status === "جديد") { changed = true; return { ...o, status: "قيد المعالجة" } }
+      if (o.status === "جديد") { changed = true; return { ...o, status: "قيد المعالجة", case_id: o.case_id || generateCaseId(orders.filter(x => x.id !== o.id).map(x => x.case_id).filter(Boolean)) } }
+      if (!o.case_id) { changed = true; return { ...o, case_id: generateCaseId(orders.filter(x => x.id !== o.id).map(x => x.case_id).filter(Boolean)) } }
       return o
     })
     if (changed) localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(orders))
@@ -205,6 +240,22 @@ export async function updateSupabaseOrderAssignment(id: string, assignedTo: stri
   if (error) {
     await updateSettingsOrderAssignment(id, assignedTo)
   }
+}
+
+export async function migrateOrdersCaseIds(): Promise<void> {
+  const supabase = createClient()
+  if (!supabase) return
+  try {
+    const { data } = await supabase.from("orders").select("id, case_id")
+    if (!data) return
+    const existing = data.filter(o => o.case_id).map(o => o.case_id) as string[]
+    const withoutId = data.filter(o => !o.case_id)
+    for (const o of withoutId) {
+      const caseId = generateCaseId(existing)
+      existing.push(caseId)
+      await supabase.from("orders").update({ case_id: caseId }).eq("id", o.id)
+    }
+  } catch { /* ignore */ }
 }
 
 export async function updateSettingsOrderInternalNotes(id: string, notes: string): Promise<void> {
@@ -299,6 +350,7 @@ export function exportOrdersToHTML(orders: any[], products?: any[]): string {
       else if (stages.has(3)) stage = "الثالثة"
     }
     return `<tr>
+      <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${o.case_id || "—"}</td>
       <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${o.id?.slice(0, 8) || "—"}</td>
       <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px">${o.customer_name || ""}</td>
       <td style="padding:8px 10px;border:1px solid #3a1f10;font-size:12px;direction:ltr">${o.customer_phone || ""}</td>
@@ -314,6 +366,7 @@ export function exportOrdersToHTML(orders: any[], products?: any[]): string {
     <h1 style="color:#c9a84c;text-align:center;font-family:serif">ROYAL DENTURE — الطلبات</h1>
     <table style="width:100%;border-collapse:collapse;margin-top:16px">
       <thead><tr style="background:#1a0a05;color:#8a7060">
+        <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">معرف الحالة</th>
         <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">رقم الطلب</th>
         <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">العميل</th>
         <th style="padding:10px;border:1px solid #3a1f10;font-size:11px">الهاتف</th>
