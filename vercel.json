@@ -1,0 +1,11 @@
+{
+  "installCommand": "pnpm install --ignore-scripts",
+  "buildCommand": "pnpm --filter @workspace/royal-denture run build",
+  "outputDirectory": "artifacts/royal-denture/dist/public",
+  "install": {
+    "ignoreScripts": true
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
