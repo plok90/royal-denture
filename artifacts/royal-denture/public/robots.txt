@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://royal-denture.web.app/sitemap.xml

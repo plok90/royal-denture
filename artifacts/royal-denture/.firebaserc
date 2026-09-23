@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "royal-8f319"
+  },
+  "targets": {
+    "royal-8f319": {
+      "hosting": {
+        "royal-denture": ["royal-denture"]
+      }
+    }
+  }
+}

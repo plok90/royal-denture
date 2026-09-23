@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ── Public catalog ──────────────────────────
+    match /products/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasAll(['name_ar', 'price', 'slug'])
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.name_ar is string
+        && request.resource.data.name_ar.size() < 300
+        && request.resource.data.slug is string
+        && request.resource.data.slug.size() < 120;
+      allow delete: if true;
+    }
+
+    match /stages/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasAll(['number', 'title'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() < 200
+        && request.resource.data.number is number;
+      allow delete: if true;
+    }
+
+    match /testimonials/{id} {
+      allow read: if true;
+      allow write: if request.resource.data.text is string
+        && request.resource.data.text.size() < 2000;
+    }
+
+    // ── Settings ────────────────────────────────
+    // Public site keys are readable by everyone (needed on home).
+    // admin_sessions / credentials stay readable only so the existing
+    // admin login works without Firebase Auth — harden further when Auth is added.
+    match /admin_settings/{key} {
+      allow read: if true;
+      allow write: if key in ['whatsapp_number', 'site_title', 'site_subtitle', 'site_tagline', 'rd_orders', 'admin_sessions', 'admin_credentials']
+        && request.resource.data.value is string
+        && request.resource.data.value.size() < 500000;
+      allow delete: if false;
+    }
+
+    // ── Orders ──────────────────────────────────
+    // Anyone may place a well-formed order; reads needed for tracking by phone.
+    match /orders/{id} {
+      allow create: if request.resource.data.keys().hasAll(['customer_name', 'customer_phone', 'total', 'items', 'created_at'])
+        && request.resource.data.customer_name is string
+        && request.resource.data.customer_name.size() < 200
+        && request.resource.data.customer_phone is string
+        && request.resource.data.customer_phone.size() >= 9
+        && request.resource.data.customer_phone.size() <= 20
+        && request.resource.data.total is number
+        && request.resource.data.total >= 0
+        && request.resource.data.total <= 100000000
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 50;
+      allow read: if true;
+      // Admin panel updates status/assignment — no Firebase Auth yet
+      allow update: if true;
+      allow delete: if true;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

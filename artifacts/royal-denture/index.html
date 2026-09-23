@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5" />
+    <title>Royal Denture — مختبر تقني لأطقم الأسنان</title>
+    <meta name="description" content="Royal Denture — مختبر أسنان متخصص في صناعة أطقم الأسنان الكاملة والجزئية، التيجان، الفينير والزراعة. جودة عالية وتسليم سريع في العراق." />
+    <meta name="keywords" content="مختبر أسنان, أطقم أسنان, تاج زركونيا, فينير, زراعة أسنان, Royal Denture, طقم سني" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#1a0a05" />
+    <link rel="canonical" href="https://royal-denture.web.app/" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Royal Denture — مختبر تقني لأطقم الأسنان" />
+    <meta property="og:description" content="أطقم أسنان كاملة وجزئية، تيجان زركونيا، فينير وزراعة — دقة لا تُضاهى." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://royal-denture.web.app/" />
+    <meta property="og:image" content="https://royal-denture.web.app/opengraph.jpg" />
+    <meta property="og:locale" content="ar_IQ" />
+    <meta property="og:site_name" content="Royal Denture" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Royal Denture — مختبر تقني لأطقم الأسنان" />
+    <meta name="twitter:description" content="أطقم أسنان، تيجان، فينير وزراعة — جودة عالية وتسليم سريع." />
+    <meta name="twitter:image" content="https://royal-denture.web.app/opengraph.jpg" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function () {});
+        });
+      }
+    </script>
+  </body>
+</html>

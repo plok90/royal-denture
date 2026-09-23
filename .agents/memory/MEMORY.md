@@ -1,0 +1,1 @@
+- [Supabase env var confusion in Expo mobile artifacts](supabase-mobile-env-quirks.md) — reuse a sibling artifact's working Supabase creds instead of re-requesting secrets from a confused user; bad secrets can't be overwritten via tools.

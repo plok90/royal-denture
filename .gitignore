@@ -47,3 +47,11 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Secrets & local Firebase
+.env
+.env.*
+!.env.example
+.firebase/
+artifacts/**/.env
+*.local

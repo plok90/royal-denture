@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/royal-denture-mobile/"
+title = "Royal Denture Mobile"
+version = "1.0.0"
+id = "artifacts/royal-denture-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/royal-denture-mobile/" ]
+localPort = 21252
+
+[services.development]
+run = "pnpm --filter @workspace/royal-denture-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/royal-denture-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/royal-denture-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "21252"
+BASE_PATH = "/royal-denture-mobile/"
